@@ -23,13 +23,14 @@ def load_config():
     return parse_config(read_config(DEFAULTS, 'IMAGEPROXY_SETTINGS'))
 
 
-def read_config(defaults, env_var):
+def read_config(defaults, env_var=None):
     conf = ConfigParser.RawConfigParser()
     with contextlib.closing(StringIO.StringIO(defaults)) as fp:
         conf.readfp(fp)
-    config_path = os.getenv(env_var)
-    if config_path is not None:
-        conf.read(config_path)
+    if env_var is not None:
+        config_path = os.getenv(env_var)
+        if config_path is not None:
+            conf.read(config_path)
     return conf
 
 
