@@ -1,3 +1,18 @@
+import ConfigParser
+import os
+import StringIO
+
+
+def read_config(defaults, env_var):
+    conf = ConfigParser.RawConfigParser()
+    with StringIO.StringIO(defaults) as fp:
+        conf.readfp(fp)
+    config_path = os.getenv(env_var)
+    if config_path is not None:
+        conf.read(config_path)
+    return conf
+
+
 class ImageProxy(object):
 
     def __init__(self):
