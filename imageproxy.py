@@ -1,4 +1,5 @@
 import ConfigParser
+import contextlib
 import os
 import StringIO
 
@@ -24,7 +25,7 @@ def load_config():
 
 def read_config(defaults, env_var):
     conf = ConfigParser.RawConfigParser()
-    with StringIO.StringIO(defaults) as fp:
+    with contextlib.closing(StringIO.StringIO(defaults)) as fp:
         conf.readfp(fp)
     config_path = os.getenv(env_var)
     if config_path is not None:
