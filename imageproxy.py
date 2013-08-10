@@ -3,6 +3,21 @@ import os
 import StringIO
 
 
+DEFAULTS = """\
+[type:image/jpeg]
+suffixes=jpeg jpg jpe
+resize=false
+
+[type:image/png]
+suffixes=.png
+resize=false
+
+[type:image/gif]
+suffixes=gif
+resize=false
+"""
+
+
 def read_config(defaults, env_var):
     conf = ConfigParser.RawConfigParser()
     with StringIO.StringIO(defaults) as fp:
