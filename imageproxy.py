@@ -18,6 +18,10 @@ resize=false
 """
 
 
+def load_config():
+    return parse_config(read_config(DEFAULTS, 'IMAGEPROXY_SETTINGS'))
+
+
 def read_config(defaults, env_var):
     conf = ConfigParser.RawConfigParser()
     with StringIO.StringIO(defaults) as fp:
@@ -26,6 +30,28 @@ def read_config(defaults, env_var):
     if config_path is not None:
         conf.read(config_path)
     return conf
+
+
+def parse_config(conf):
+    sites = []
+    types = {}
+
+    def parse_type(name, fields):
+        sites.append((name, fields))
+
+    def parse_site(name, fields):
+        types[name] = fields
+
+    parsers = {
+        'type:', parse_type,
+        'site:', parse_site,
+    }
+    for section in conf.sections():
+        for prefix in parsers:
+            if section.startswith(prefix):
+                parsers[prefix](section[len(prefix):], conf.options(section))
+                break
+    return sites, types
 
 
 class ImageProxy(object):
