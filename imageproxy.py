@@ -39,14 +39,13 @@ def parse_config(conf):
     types = {}
 
     def parse_type(section, name):
-        types[name] = {
+        values = {
             'resize': conf.getboolean(section, 'resize'),
-            'suffixes': [
-                suffix
-                for suffix in conf.get(section, 'suffixes').split(' ')
-                if suffix != ''
-            ],
+            'mimetype': name,
         }
+        for suffix in conf.get(section, 'suffixes').split(' '):
+            if suffix != '':
+                types[suffix] = values
 
     def parse_site(section, name):
         sites[name] = {
