@@ -76,7 +76,8 @@ def parse_config(conf):
 
 def resize(src, dest, width, height):
     """
-    Resize the given image and save it at the given path.
+    Resize the given image and save it to the given sink. `src` and `dest`
+    can be either file paths or handles.
     """
     img = Image.open(src)
     img.thumbnail((width, height), Image.ANTIALIAS)
