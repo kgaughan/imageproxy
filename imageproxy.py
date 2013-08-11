@@ -35,14 +35,14 @@ def read_config(defaults, env_var=None):
 
 
 def parse_config(conf):
-    sites = []
+    sites = {}
     types = {}
 
     def parse_type(name, fields):
-        sites.append((name, fields))
+        types[name] = fields
 
     def parse_site(name, fields):
-        types[name] = fields
+        sites[name] = fields
 
     parsers = {
         'type:': parse_type,
@@ -51,7 +51,8 @@ def parse_config(conf):
     for section in conf.sections():
         for prefix in parsers:
             if section.startswith(prefix):
-                parsers[prefix](section[len(prefix):], conf.options(section))
+                parsers[prefix](section[len(prefix):],
+                                dict(conf.items(section)))
                 break
     return sites, types
 
