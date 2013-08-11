@@ -1,5 +1,7 @@
 import ConfigParser
 import contextlib
+import httplib
+import logging
 import os
 import StringIO
 
@@ -25,6 +27,9 @@ resize=false
 suffixes=gif
 resize=false
 """
+
+
+logger = logging.getLogger(__name__)
 
 
 def load_config():
@@ -84,6 +89,18 @@ def resize(src, dest, width, height):
     img.save(dest, 'JPEG', quality=90, optimize=True, progressive=True)
 
 
+class HTTPError(Exception):
+    """
+    Application wants to respond with the given HTTP status code.
+    """
+
+    def __init__(self, code, message=None):
+        if message is None:
+            message = httplib.responses[code]
+        super(HTTPError, self).__init__(message)
+        self.code = code
+
+
 class ImageProxy(object):
 
     def __init__(self, sites, types):
@@ -94,20 +111,17 @@ class ImageProxy(object):
     def get_site_details(self, site):
         return None
 
+    def handle(self, environ):
+        return []
+
     def __call__(self, environ, start_response):
-        if environ['REQUEST_METHOD'] not in ('GET', 'HEAD'):
-            start_response('405 Method Not Allowed',
-                           [('Content-Type', 'text/plain')])
-            return ['Method not allowed']
-
-        site = self.get_site_details(environ['REMOTE_HOST'])
-        if site is None:
-            start_response('403 Forbidden',
-                           [('Content-Type', 'text/plain')])
-            return ['Host not allowed']
-
-        start_response('200 Ok', [('Content-Type', 'text/plain')])
-        return ["My response"]
+        try:
+            return self.handle(environ)
+        except HTTPError as exc:
+            start_response(
+                '{0} {1}'.format(exc.code, httplib.responses[exc.code]),
+                [('Content-Type', 'text/plain')])
+            return [exc.message]
 
 
 def create_application():
