@@ -146,7 +146,20 @@ def resize(src, dest, width, height):
     can be either file paths or handles.
     """
     img = Image.open(src)
-    img.thumbnail((width, height), Image.ANTIALIAS)
+
+    # Figure out the corresponding other dimension.
+    src_width, src_height = img.size
+    if height is None:
+        width = min(src_width, width)
+        height = int(float(src_height) * width / src_width)
+    elif width is None:
+        height = min(src_height, height)
+        width = int(float(src_width) * height / src_height)
+
+    # Only resize if smaller.
+    if width < src_width and height < src_height:
+        img.thumbnail((width, height), Image.ANTIALIAS)
+
     img.save(dest, 'JPEG', quality=90, optimize=True, progressive=True)
 
 
