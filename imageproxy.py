@@ -95,6 +95,8 @@ TEMPLATE = """\
 </html>
 """
 
+BLOCK_SIZE = 8196
+
 
 logger = logging.getLogger(__name__)
 
@@ -197,9 +199,42 @@ def make_status_line(code):
     return '{0} {1}'.format(code, httplib.responses[code])
 
 
-class ImageProxy(object):
+def list_dir(url_path, disc_path):
+    entries = []
+    for entry in sorted(os.listdir(disc_path), key=lambda v: v.lower()):
+        if os.path.isdir(os.path.join(disc_path, entry)):
+            entry += '/'
+        entries.append(
+            '<li><a href="{0}">{0}</a></li>'.format(
+                cgi.escape(entry)))
+    return TEMPLATE.format(cgi.escape(url_path), ''.join(entries))
 
-    BLOCK_SIZE = 8196
+
+def send_named_file(environ, path):
+    return send_file(environ, open(path, 'r'))
+
+
+def resize_and_send_file(environ, path, width, height):
+    fh = stringio.StringIO()
+    resize(path, fh, width, height)
+    fh.seek(0)
+    return send_file(environ, fh)
+
+
+def send_file(environ, fh):
+    if 'wsgi.file_wrapper' in environ:
+        return environ['wsgi.file_wrapper'](fh, BLOCK_SIZE)
+    return iter(lambda: fh.read(BLOCK_SIZE), '')
+
+
+def get(parameters, key, default=None, cast=str):
+    try:
+        return cast(parameters[key][0]) if key in parameters else default
+    except TypeError:
+        return default
+
+
+class ImageProxy(object):
 
     def __init__(self, sites, types):
         super(ImageProxy, self).__init__()
@@ -213,36 +248,6 @@ class ImageProxy(object):
                 if leading == '' or leading[-1] == '.':
                     return details
         return None
-
-    def list_dir(self, url_path, disc_path):
-        entries = []
-        for entry in sorted(os.listdir(disc_path), key=lambda v: v.lower()):
-            if os.path.isdir(os.path.join(disc_path, entry)):
-                entry += '/'
-            entries.append(
-                '<li><a href="{0}">{0}</a></li>'.format(
-                    cgi.escape(entry)))
-        return TEMPLATE.format(cgi.escape(url_path), ''.join(entries))
-
-    def send_named_file(self, environ, path):
-        return self.send_file(environ, open(path, 'r'))
-
-    def resize_and_send_file(self, environ, path, width, height):
-        fh = stringio.StringIO()
-        resize(path, fh, width, height)
-        fh.seek(0)
-        return self.send_file(environ, fh)
-
-    def send_file(self, environ, fh):
-        if 'wsgi.file_wrapper' in environ:
-            return environ['wsgi.file_wrapper'](fh, self.BLOCK_SIZE)
-        return iter(lambda: fh.read(self.BLOCK_SIZE), '')
-
-    def get(self, parameters, key, default=None, cast=str):
-        try:
-            return cast(parameters[key][0]) if key in parameters else default
-        except TypeError:
-            return default
 
     def is_resizable(self, mimetype):
         return mimetype in self.types and self.types[mimetype]
@@ -265,15 +270,15 @@ class ImageProxy(object):
         if os.path.isdir(path):
             return (httplib.OK,
                     [('Content-Type', 'text/html; charset=utf-8')],
-                    [self.list_dir(environ['PATH_INFO'], path)])
+                    [list_dir(environ['PATH_INFO'], path)])
 
         mimetype, _ = mimetypes.guess_type(path)
         if mimetype is None:
             mimetype = 'application/octet-stream'
 
         parameters = cgi.parse_qs(environ.get('QUERY_STRING', ''))
-        width = self.get(parameters, 'width', cast=int)
-        height = self.get(parameters, 'height', cast=int)
+        width = get(parameters, 'w', cast=int)
+        height = get(parameters, 'h', cast=int)
 
         if not self.is_resizable(mimetype) and \
                 (width is not None or height is not None):
@@ -284,11 +289,11 @@ class ImageProxy(object):
             return (httplib.OK,
                     [('Content-Type', mimetype),
                      ('Content-Length', str(os.path.getsize(path)))],
-                    self.send_named_file(environ, path))
+                    send_named_file(environ, path))
 
         return (httplib.OK,
                 [('Content-Type', mimetype)],
-                self.resize_and_send_file(environ, path, width, height))
+                resize_and_send_file(environ, path, width, height))
 
     def __call__(self, environ, start_response):
         try:
