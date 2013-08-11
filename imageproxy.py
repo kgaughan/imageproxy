@@ -79,7 +79,7 @@ def is_subpath(base, path, sep=os.path.sep):
     """
     Check if the given path is a proper subpath of a base path.
     """
-    if path.startswith(path):
+    if path.startswith(base):
         trailing = base[len(base):]
         return trailing == '' or trailing[0] == sep
     return False
