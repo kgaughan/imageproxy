@@ -92,6 +92,11 @@ class ImageProxy(object):
         self.types = types
 
     def __call__(self, environ, start_response):
+        if environ['REQUEST_METHOD'] not in ('GET', 'HEAD'):
+            start_response('405 Method Not Allowed',
+                           [('Content-Type', 'text/plain')])
+            return ['Method not allowed']
+
         start_response('200 Ok', [('Content-Type', 'text/plain')])
         return ["My response"]
 
