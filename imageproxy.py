@@ -103,6 +103,12 @@ class HTTPError(Exception):
         self.code = code
 
 
+def make_status_line(code):
+    """
+    """
+    return '{0} {1}'.format(code, httplib.responses[code])
+
+
 class ImageProxy(object):
 
     def __init__(self, sites, types):
@@ -129,16 +135,18 @@ class ImageProxy(object):
         path = real_join(site['root'], environ['PATH_INFO'][1:])
         if not is_subpath(site['root'], path):
             raise HTTPError(httplib.BAD_REQUEST, 'Bad path')
-        return []
+        return (httplib.OK,
+                [('Content-Type', 'text/plain')],
+                [path, ':', repr(site)])
 
     def __call__(self, environ, start_response):
         try:
-            result = self.handle(environ)
-            start_response('200 OK', [('Content-Type', 'text/plain')])
+            code, headers, result = self.handle(environ)
+            start_response(make_status_line(code), headers)
             return result
         except HTTPError as exc:
             start_response(
-                '{0} {1}'.format(exc.code, httplib.responses[exc.code]),
+                make_status_line(exc.code),
                 [('Content-Type', 'text/plain')])
             return [exc.message]
 
