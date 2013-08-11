@@ -130,9 +130,10 @@ class ImageProxy(object):
         site = self.get_site_details(environ['REMOTE_HOST'])
         if site is None:
             raise HTTPError(httplib.FORBIDDEN, 'Host not allowed')
-        if not is_subpath(site['prefix'], environ['PATH_INFO']):
+        if not is_subpath(site['prefix'], environ['PATH_INFO'], sep='/'):
             raise HTTPError(httplib.FORBIDDEN, 'Bad prefix')
-        path = real_join(site['root'], environ['PATH_INFO'][1:])
+        path = real_join(site['root'],
+                         environ['PATH_INFO'][(len(site['prefix']) + 1):])
         if not is_subpath(site['root'], path):
             raise HTTPError(httplib.BAD_REQUEST, 'Bad path')
         return (httplib.OK,
