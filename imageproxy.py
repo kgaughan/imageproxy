@@ -1,3 +1,4 @@
+import cgi
 import ConfigParser
 import contextlib
 import httplib
@@ -18,6 +19,21 @@ __all__ = (
 DEFAULTS = """\
 [type:image/jpeg]
 resize=true
+"""
+
+TEMPLATE = """\
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Directory listing for {0}</title>
+    </head>
+    <body>
+        <h1>Directory listing for {0}</h1>
+        <ul><li><a href="../">../</a></li>{1}</ul>
+        <hr>
+        <address>ImageProxy</address>
+    </body>
+</html>
 """
 
 
@@ -124,6 +140,16 @@ class ImageProxy(object):
                     return details
         return None
 
+    def list_dir(self, url_path, disc_path):
+        entries = []
+        for entry in sorted(os.listdir(disc_path), key=lambda v: v.lower()):
+            if os.path.isdir(os.path.join(disc_path, entry)):
+                entry += '/'
+            entries.append(
+                    '<li><a href="{0}">{0}</a></li>'.format(
+                        cgi.escape(entry)))
+        return TEMPLATE.format(cgi.escape(url_path), ''.join(entries))
+
     def handle(self, environ):
         if environ['REQUEST_METHOD'] not in ('GET', 'HEAD'):
             raise HTTPError(httplib.METHOD_NOT_ALLOWED)
@@ -136,6 +162,13 @@ class ImageProxy(object):
                          environ['PATH_INFO'][(len(site['prefix']) + 1):])
         if not is_subpath(site['root'], path):
             raise HTTPError(httplib.BAD_REQUEST, 'Bad path')
+        if not os.path.exists(path):
+            raise HTTPError(httplib.NOT_FOUND)
+        if os.path.isdir(path):
+            return (httplib.OK,
+                    [('Content-Type', 'text/html; charset=utf-8')],
+                    [self.list_dir(environ['PATH_INFO'], path)])
+
         return (httplib.OK,
                 [('Content-Type', 'text/plain')],
                 [path, ':', repr(site)])
