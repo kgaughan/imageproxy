@@ -10,7 +10,7 @@ suffixes=jpeg jpg jpe
 resize=false
 
 [type:image/png]
-suffixes=.png
+suffixes=png
 resize=false
 
 [type:image/gif]
