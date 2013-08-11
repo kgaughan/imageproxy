@@ -26,12 +26,48 @@ TEMPLATE = """\
 <html>
     <head>
         <title>Directory listing for {0}</title>
+        <style type="text/css" media="all">
+        body {{
+            font-family: sans-serif;
+            margin: 0 auto;
+            max-width: 40em;
+            line-height: 1.5;
+        }}
+        h1 {{
+            margin: 1em 0 0 0;
+            padding: 0.125ex 1ex;
+            font-size: 100%;
+            border-bottom: 1px solid silver;
+        }}
+        ul {{
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }}
+        li {{
+            border-bottom: 1px solid silver;
+        }}
+        li a {{
+            display: block;
+            padding: 0.125ex 1ex;
+        }}
+        li a:hover {{
+            background: #EEE;
+        }}
+        hr {{
+            display: none;
+        }}
+        address {{
+            text-align: right;
+            padding: 0.125ex 1ex;
+        }}
+        </style>
     </head>
     <body>
         <h1>Directory listing for {0}</h1>
         <ul><li><a href="../">../</a></li>{1}</ul>
         <hr>
-        <address>ImageProxy</address>
+        <address>ImageProxy/0.1.0</address>
     </body>
 </html>
 """
@@ -146,8 +182,8 @@ class ImageProxy(object):
             if os.path.isdir(os.path.join(disc_path, entry)):
                 entry += '/'
             entries.append(
-                    '<li><a href="{0}">{0}</a></li>'.format(
-                        cgi.escape(entry)))
+                '<li><a href="{0}">{0}</a></li>'.format(
+                    cgi.escape(entry)))
         return TEMPLATE.format(cgi.escape(url_path), ''.join(entries))
 
     def handle(self, environ):
