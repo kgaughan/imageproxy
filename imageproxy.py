@@ -133,7 +133,9 @@ class ImageProxy(object):
 
     def __call__(self, environ, start_response):
         try:
-            return self.handle(environ)
+            result = self.handle(environ)
+            start_response('200 OK', [('Content-Type', 'text/plain')])
+            return result
         except HTTPError as exc:
             start_response(
                 '{0} {1}'.format(exc.code, httplib.responses[exc.code]),
