@@ -7,7 +7,7 @@ import StringIO
 DEFAULTS = """\
 [type:image/jpeg]
 suffixes=jpeg jpg jpe
-resize=false
+resize=true
 
 [type:image/png]
 suffixes=png
