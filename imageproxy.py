@@ -45,8 +45,8 @@ def parse_config(conf):
         types[name] = fields
 
     parsers = {
-        'type:', parse_type,
-        'site:', parse_site,
+        'type:': parse_type,
+        'site:': parse_site,
     }
     for section in conf.sections():
         for prefix in parsers:
