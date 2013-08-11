@@ -3,6 +3,7 @@ import contextlib
 import httplib
 import logging
 import os
+import os.path
 import StringIO
 
 from PIL import Image
@@ -89,6 +90,22 @@ def resize(src, dest, width, height):
     img.save(dest, 'JPEG', quality=90, optimize=True, progressive=True)
 
 
+def is_subpath(base, path, sep=os.path.sep):
+    """
+    Check if the given path is a proper subpath of a base path.
+    """
+    if path.startswith(path):
+        trailing = base[len(base):]
+        return trailing == '' or trailing[0] == sep
+    return False
+
+
+def real_join(*args):
+    """
+    """
+    return os.path.realpath(os.path.join(*args))
+
+
 class HTTPError(Exception):
     """
     Application wants to respond with the given HTTP status code.
@@ -122,6 +139,11 @@ class ImageProxy(object):
         site = self.get_site_details(environ['REMOTE_HOST'])
         if site is None:
             raise HTTPError(httplib.FORBIDDEN, 'Host not allowed')
+        if not is_subpath(site['prefix'], environ['PATH_INFO']):
+            raise HTTPError(httplib.FORBIDDEN, 'Bad prefix')
+        path = real_join(site['root'], environ['PATH_INFO'][1:])
+        if not is_subpath(site['root'], path):
+            raise HTTPError(httplib.BAD_REQUEST, 'Bad path')
         return []
 
     def __call__(self, environ, start_response):
