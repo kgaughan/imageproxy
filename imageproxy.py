@@ -17,16 +17,7 @@ __all__ = (
 
 DEFAULTS = """\
 [type:image/jpeg]
-suffixes=jpeg jpg jpe
 resize=true
-
-[type:image/png]
-suffixes=png
-resize=false
-
-[type:image/gif]
-suffixes=gif
-resize=false
 """
 
 
@@ -53,13 +44,7 @@ def parse_config(conf):
     types = {}
 
     def parse_type(section, name):
-        values = {
-            'resize': conf.getboolean(section, 'resize'),
-            'mimetype': name,
-        }
-        for suffix in conf.get(section, 'suffixes').split(' '):
-            if suffix != '':
-                types[suffix] = values
+        types[name] = conf.getboolean(section, 'resize')
 
     def parse_site(section, name):
         sites[name] = {

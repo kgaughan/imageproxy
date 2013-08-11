@@ -22,19 +22,8 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(len(sites), 0)
 
         self.assertTrue(isinstance(types, dict))
-        self.assertEqual(sorted(types.keys()),
-                         ['gif', 'jpe', 'jpeg', 'jpg', 'png'])
-
-        self.assertEqual(types['gif'], {'resize': False,
-                                        'mimetype': 'image/gif'})
-
-        self.assertEqual(types['jpg'], {'resize': True,
-                                        'mimetype': 'image/jpeg'})
-        self.assertEqual(types['jpg'], types['jpe'])
-        self.assertEqual(types['jpg'], types['jpeg'])
-
-        self.assertNotEqual(types['jpg'], types['png'])
-        self.assertNotEqual(types['jpg'], types['gif'])
+        self.assertEqual(sorted(types.keys()), ['image/jpeg'])
+        self.assertTrue(types['image/jpeg'])
 
     def test_parse_site(self):
         defaults = (
