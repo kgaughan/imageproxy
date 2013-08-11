@@ -227,6 +227,12 @@ class ImageProxy(object):
     def send_named_file(self, environ, path):
         return self.send_file(environ, open(path, 'r'))
 
+    def resize_and_send_file(self, environ, path, width, height):
+        fh = stringio.StringIO()
+        resize(path, fh, width, height)
+        fh.seek(0)
+        return self.send_file(environ, fh)
+
     def send_file(self, environ, fh):
         if 'wsgi.file_wrapper' in environ:
             return environ['wsgi.file_wrapper'](fh, self.BLOCK_SIZE)
@@ -278,14 +284,11 @@ class ImageProxy(object):
             return (httplib.OK,
                     [('Content-Type', mimetype),
                      ('Content-Length', str(os.path.getsize(path)))],
-                    self.send_file(environ, path))
+                    self.send_named_file(environ, path))
 
-        # If a file, and no resize has been requested, pass it along.
-        # If it's not resizable, reject the request.
-        # Otherwise resize it and pass it along.
         return (httplib.OK,
-                [('Content-Type', 'text/plain')],
-                [repr(parameters)])
+                [('Content-Type', mimetype)],
+                self.resize_and_send_file(environ, path, width, height))
 
     def __call__(self, environ, start_response):
         try:
