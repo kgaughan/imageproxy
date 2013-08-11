@@ -27,5 +27,10 @@ GIFs and PNGs resizable, add the following::
 	[type:image/png]
 	resize=true
 
-You can specify the configuration file location by giving its path in the
-IMAGEPROXY_SETTINGS environment variable.
+You can specify the configuration file location by giving its path in
+the IMAGEPROXY_SETTINGS environment variable.
+
+If you want to use this with Paste, it comes with a sample config file.
+Naturally, you'll need Paste, PasteDeploy, and PasteScript to run it.
+However, Paste isn't required and the `imageproxy.create_application`
+callable can be used with any WSGI server.

@@ -14,6 +14,12 @@ setup(
     zip_safe=True,
     install_requires=[line.strip() for line in open('requirements.txt', 'r')],
 
+    entry_points={
+        'paste.app_factory': (
+            'main=imageproxy:create_application',
+        ),
+    },
+
     classifiers=(
         'Development Status :: 2 - Pre-Alpha',
         'Environment :: Web Environment',

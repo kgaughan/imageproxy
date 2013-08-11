@@ -101,18 +101,22 @@ BLOCK_SIZE = 8196
 logger = logging.getLogger(__name__)
 
 
-def load_config():
-    return parse_config(read_config(DEFAULTS, 'IMAGEPROXY_SETTINGS'))
+def load_config(config_file=None):
+    return parse_config(read_config(DEFAULTS,
+                                    'IMAGEPROXY_SETTINGS',
+                                    config_file))
 
 
-def read_config(defaults, env_var=None):
+def read_config(defaults, env_var=None, config_file=None):
     conf = ConfigParser.RawConfigParser()
     with contextlib.closing(stringio.StringIO(defaults)) as fp:
         conf.readfp(fp)
-    if env_var is not None:
-        config_path = os.getenv(env_var)
-        if config_path is not None:
-            conf.read(config_path)
+    config_files = []
+    if env_var is not None and env_var in os.environ:
+        config_files.append(os.getenv(env_var))
+    if config_file is not None:
+        config_files.append(config_file)
+    conf.read(config_files)
     return conf
 
 
@@ -323,8 +327,8 @@ class ImageProxy(object):
             return [exc.message]
 
 
-def create_application():
-    sites, types = load_config()
+def create_application(global_config=None, **local_conf):
+    sites, types = load_config(local_conf.get('config'))
     return ImageProxy(sites, types)
 
 
