@@ -124,8 +124,8 @@ def parse_config(conf):
     def parse_site(section, name):
         sites[name] = {
             'cache': conf.getboolean(section, 'cache'),
-            'prefix': conf.get(section, 'prefix'),
-            'root': conf.get(section, 'root'),
+            'prefix': conf.get(section, 'prefix').rstrip('/'),
+            'root': conf.get(section, 'root').rstrip('/'),
         }
 
     parsers = {
