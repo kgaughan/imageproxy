@@ -91,11 +91,20 @@ class ImageProxy(object):
         self.sites = sites
         self.types = types
 
+    def get_site_details(self, site):
+        return None
+
     def __call__(self, environ, start_response):
         if environ['REQUEST_METHOD'] not in ('GET', 'HEAD'):
             start_response('405 Method Not Allowed',
                            [('Content-Type', 'text/plain')])
             return ['Method not allowed']
+
+        site = self.get_site_details(environ['REMOTE_HOST'])
+        if site is None:
+            start_response('403 Forbidden',
+                           [('Content-Type', 'text/plain')])
+            return ['Host not allowed']
 
         start_response('200 Ok', [('Content-Type', 'text/plain')])
         return ["My response"]
