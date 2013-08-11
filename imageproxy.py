@@ -6,6 +6,12 @@ import StringIO
 from PIL import Image
 
 
+__all__ = (
+    'create_application',
+    'ImageProxy',
+)
+
+
 DEFAULTS = """\
 [type:image/jpeg]
 suffixes=jpeg jpg jpe
