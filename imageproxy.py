@@ -3,6 +3,7 @@ import ConfigParser
 import contextlib
 import httplib
 import logging
+import mimetypes
 import os
 import os.path
 import StringIO
@@ -163,6 +164,8 @@ def make_status_line(code):
 
 class ImageProxy(object):
 
+    BLOCK_SIZE = 8196
+
     def __init__(self, sites, types):
         super(ImageProxy, self).__init__()
         self.sites = sites
@@ -186,6 +189,21 @@ class ImageProxy(object):
                     cgi.escape(entry)))
         return TEMPLATE.format(cgi.escape(url_path), ''.join(entries))
 
+    def sendfile(self, environ, path):
+        fh = open(path, 'r')
+        if 'wsgi.file_wrapper' in environ:
+            return environ['wsgi.file_wrapper'](fh, self.BLOCK_SIZE)
+        return iter(lambda: fh.read(self.BLOCK_SIZE), '')
+
+    def get(self, parameters, key, default=None, cast=str):
+        try:
+            return cast(parameters[key][0]) if key in parameters else default
+        except TypeError:
+            return default
+
+    def is_resizable(self, mimetype):
+        return mimetype in self.types and self.types[mimetype]
+
     def handle(self, environ):
         if environ['REQUEST_METHOD'] not in ('GET', 'HEAD'):
             raise HTTPError(httplib.METHOD_NOT_ALLOWED)
@@ -200,14 +218,37 @@ class ImageProxy(object):
             raise HTTPError(httplib.BAD_REQUEST, 'Bad path')
         if not os.path.exists(path):
             raise HTTPError(httplib.NOT_FOUND)
+
         if os.path.isdir(path):
             return (httplib.OK,
                     [('Content-Type', 'text/html; charset=utf-8')],
                     [self.list_dir(environ['PATH_INFO'], path)])
 
+        mimetype, _ = mimetypes.guess_type(path)
+        if mimetype is None:
+            mimetype = 'application/octet-stream'
+
+        parameters = cgi.parse_qs(environ.get('QUERY_STRING', ''))
+        width = self.get(parameters, 'width', cast=int)
+        height = self.get(parameters, 'height', cast=int)
+
+        if not self.is_resizable(mimetype) and \
+                (width is not None or height is not None):
+            raise HTTPError(httplib.BAD_REQUEST, 'Resizing not allowed!')
+
+        if not self.is_resizable(mimetype) or \
+                (width is None and height is None):
+            return (httplib.OK,
+                    [('Content-Type', mimetype),
+                     ('Content-Length', str(os.path.getsize(path)))],
+                    self.sendfile(environ, path))
+
+        # If a file, and no resize has been requested, pass it along.
+        # If it's not resizable, reject the request.
+        # Otherwise resize it and pass it along.
         return (httplib.OK,
                 [('Content-Type', 'text/plain')],
-                [path, ':', repr(site)])
+                [repr(parameters)])
 
     def __call__(self, environ, start_response):
         try:
