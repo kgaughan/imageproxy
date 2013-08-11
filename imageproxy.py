@@ -112,6 +112,11 @@ class ImageProxy(object):
         return None
 
     def handle(self, environ):
+        if environ['REQUEST_METHOD'] not in ('GET', 'HEAD'):
+            raise HTTPError(httplib.METHOD_NOT_ALLOWED)
+        site = self.get_site_details(environ['REMOTE_HOST'])
+        if site is None:
+            raise HTTPError(httplib.FORBIDDEN, 'Host not allowed')
         return []
 
     def __call__(self, environ, start_response):
