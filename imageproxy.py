@@ -38,11 +38,22 @@ def parse_config(conf):
     sites = {}
     types = {}
 
-    def parse_type(name, fields):
-        types[name] = fields
+    def parse_type(section, name):
+        types[name] = {
+            'resize': conf.getboolean(section, 'resize'),
+            'suffixes': [
+                suffix
+                for suffix in conf.get(section, 'suffixes').split(' ')
+                if suffix != ''
+            ],
+        }
 
-    def parse_site(name, fields):
-        sites[name] = fields
+    def parse_site(section, name):
+        sites[name] = {
+            'cache': conf.getboolean(section, 'cache'),
+            'prefix': conf.get(section, 'prefix'),
+            'root': conf.get(section, 'root'),
+        }
 
     parsers = {
         'type:': parse_type,
@@ -51,8 +62,7 @@ def parse_config(conf):
     for section in conf.sections():
         for prefix in parsers:
             if section.startswith(prefix):
-                parsers[prefix](section[len(prefix):],
-                                dict(conf.items(section)))
+                parsers[prefix](section, section[len(prefix):])
                 break
     return sites, types
 
