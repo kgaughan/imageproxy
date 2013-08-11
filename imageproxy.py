@@ -3,6 +3,8 @@ import contextlib
 import os
 import StringIO
 
+from PIL import Image
+
 
 DEFAULTS = """\
 [type:image/jpeg]
@@ -64,6 +66,15 @@ def parse_config(conf):
                 parsers[prefix](section, section[len(prefix):])
                 break
     return sites, types
+
+
+def resize(src, dest, width, height):
+    """
+    Resize the given image and save it at the given path.
+    """
+    img = Image.open(src)
+    img.thumbnail((width, height), Image.ANTIALIAS)
+    img.save(dest, 'JPEG', quality=90, optimize=True, progressive=True)
 
 
 class ImageProxy(object):
