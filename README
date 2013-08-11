@@ -1,2 +1,31 @@
 **imageproxy** is a small standalone WSGI application that dynamically
 resizes images.
+
+It supports virtual hosting, so you can use the same instance to serve
+assets for different domains.
+
+Example config file::
+
+	[site:example.net]
+	root=/srv/example.net/web/media/images
+	prefix=/assets/media/images
+	cache=false
+
+	[site:example.com]
+	root=/srv/example.com/web/media/images
+	prefix=/assets/media/images
+	cache=false
+
+Currently the `cache` field does nothing, but is still required.
+
+By default only JPEG files can be resized, but if you'd like to make
+GIFs and PNGs resizable, add the following::
+
+	[type:image/gif]
+	resize=true
+
+	[type:image/png]
+	resize=true
+
+You can specify the configuration file location by giving its path in the
+IMAGEPROXY_SETTINGS environment variable.
