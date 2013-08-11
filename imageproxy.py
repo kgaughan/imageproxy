@@ -234,6 +234,21 @@ def get(parameters, key, default=None, cast=str):
         return default
 
 
+def split_host(host, default_port):
+    if host[:1] == '[':
+        # IPv6
+        parts = host[1:].split(']', 1)
+        if len(parts[1]) > 1:
+            return (parts[0], parts[1].lstrip(':'))
+        return (parts[0], default_port)
+    else:
+        # IPv4 or hostname.
+        parts = host.split(':', 1)
+        if len(parts) == 2:
+            return tuple(parts)
+        return (host, default_port)
+
+
 class ImageProxy(object):
 
     def __init__(self, sites, types):
@@ -255,7 +270,8 @@ class ImageProxy(object):
     def handle(self, environ):
         if environ['REQUEST_METHOD'] not in ('GET', 'HEAD'):
             raise HTTPError(httplib.METHOD_NOT_ALLOWED)
-        site = self.get_site_details(environ['REMOTE_HOST'])
+        vhost, _ = split_host(environ['HTTP_HOST'], 80)
+        site = self.get_site_details(vhost)
         if site is None:
             raise HTTPError(httplib.FORBIDDEN, 'Host not allowed')
         if not is_subpath(site['prefix'], environ['PATH_INFO'], sep='/'):
