@@ -78,7 +78,12 @@ class ImageProxy(object):
         return ["My response"]
 
 
+def create_application():
+    sites, types = load_config()
+    return ImageProxy(sites, types)
+
+
 if __name__ == '__main__':
     from wsgiref.simple_server import make_server
-    svr = make_server('localhost', 8080, ImageProxy({}, {}))
+    svr = make_server('localhost', 8080, create_application())
     svr.serve_forever()
