@@ -25,7 +25,10 @@ import logging
 import mimetypes
 import os
 import os.path
-import StringIO
+try:
+    import cStringIO as stringio
+except ImportError:
+    import StringIO as stringio
 
 from PIL import Image
 
@@ -102,7 +105,7 @@ def load_config():
 
 def read_config(defaults, env_var=None):
     conf = ConfigParser.RawConfigParser()
-    with contextlib.closing(StringIO.StringIO(defaults)) as fp:
+    with contextlib.closing(stringio.StringIO(defaults)) as fp:
         conf.readfp(fp)
     if env_var is not None:
         config_path = os.getenv(env_var)
