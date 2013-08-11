@@ -1,0 +1,2 @@
+**imageproxy** is a small standalone WSGI application that dynamically
+resizes images.
