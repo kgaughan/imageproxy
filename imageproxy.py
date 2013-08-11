@@ -109,6 +109,11 @@ class ImageProxy(object):
         self.types = types
 
     def get_site_details(self, site):
+        for fuzzy, details in self.sites.iteritems():
+            if site.endswith(fuzzy):
+                leading = site[:-len(fuzzy)]
+                if leading == '' or leading[-1] == '.':
+                    return details
         return None
 
     def handle(self, environ):
