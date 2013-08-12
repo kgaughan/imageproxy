@@ -333,7 +333,11 @@ def create_application(global_config=None, **local_conf):
     return ImageProxy(sites, types)
 
 
-if __name__ == '__main__':
+def main():
     from wsgiref.simple_server import make_server
     svr = make_server('localhost', 8080, create_application())
     svr.serve_forever()
+
+
+if __name__ == '__main__':
+    main()
