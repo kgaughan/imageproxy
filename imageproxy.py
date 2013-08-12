@@ -17,7 +17,6 @@ A small WSGI app that does automatic JPEG image resizing.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cgi
 import ConfigParser
 import contextlib
 import httplib
@@ -29,6 +28,8 @@ try:
     import cStringIO as stringio
 except ImportError:
     import StringIO as stringio
+import urlparse
+from xml.sax.saxutils import quoteattr
 
 from PIL import Image
 
@@ -210,8 +211,8 @@ def list_dir(url_path, disc_path):
             entry += '/'
         entries.append(
             '<li><a href="{0}">{0}</a></li>'.format(
-                cgi.escape(entry)))
-    return TEMPLATE.format(cgi.escape(url_path), ''.join(entries))
+                quoteattr(entry)))
+    return TEMPLATE.format(quoteattr(url_path), ''.join(entries))
 
 
 def send_named_file(environ, path):
@@ -296,7 +297,7 @@ class ImageProxy(object):
         if mimetype is None:
             mimetype = 'application/octet-stream'
 
-        parameters = cgi.parse_qs(environ.get('QUERY_STRING', ''))
+        parameters = urlparse.parse_qs(environ.get('QUERY_STRING', ''))
         width = get(parameters, 'w', cast=int)
         height = get(parameters, 'h', cast=int)
 
