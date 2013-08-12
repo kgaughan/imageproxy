@@ -29,15 +29,18 @@ try:
 except ImportError:
     import StringIO as stringio
 import urlparse
-from xml.sax.saxutils import quoteattr
+from xml.sax.saxutils import escape
 
 from PIL import Image
+import pkg_resources
 
 
 __all__ = (
     'create_application',
     'ImageProxy',
 )
+
+__version__ = pkg_resources.get_distribution('imageproxy').version
 
 
 DEFAULTS = """\
@@ -91,7 +94,7 @@ TEMPLATE = """\
         <h1>Directory listing for {0}</h1>
         <ul><li><a href="../">../</a></li>{1}</ul>
         <hr>
-        <address>ImageProxy/0.1.0</address>
+        <address>ImageProxy/{2}</address>
     </body>
 </html>
 """
@@ -211,8 +214,10 @@ def list_dir(url_path, disc_path):
             entry += '/'
         entries.append(
             '<li><a href="{0}">{0}</a></li>'.format(
-                quoteattr(entry)))
-    return TEMPLATE.format(quoteattr(url_path), ''.join(entries))
+                escape(entry)))
+    return TEMPLATE.format(escape(url_path),
+                           ''.join(entries),
+                           __version__)
 
 
 def send_named_file(environ, path):
