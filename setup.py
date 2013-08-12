@@ -12,7 +12,7 @@ setup(
     license='Apache Licence v2.0',
     py_modules=['imageproxy'],
     zip_safe=True,
-    install_requires=[line.strip() for line in open('requirements.txt', 'r')],
+    install_requires=['pillow'],
 
     entry_points={
         'paste.app_factory': (
