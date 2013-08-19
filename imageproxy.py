@@ -218,6 +218,26 @@ class HTTPError(Exception):
         super(HTTPError, self).__init__(message)
         self.code = code
 
+    def headers(self):
+        """
+        Additional headers to be sent.
+        """
+        return []
+
+
+class MethodNotAllowed(HTTPError):
+    """
+    Method not allowed.
+    """
+
+    def __init__(self, allowed=(), message=None):
+        super(MethodNotAllowed, self).__init__(httplib.METHOD_NOT_ALLOWED,
+                                               message)
+        self.allowed = allowed
+
+    def headers(self):
+        return [('Allow', ', '.join(self.allowed))]
+
 
 def make_status_line(code):
     """
@@ -328,7 +348,7 @@ class ImageProxy(object):
         Process the request.
         """
         if environ['REQUEST_METHOD'] not in ('GET', 'HEAD'):
-            raise HTTPError(httplib.METHOD_NOT_ALLOWED)
+            raise MethodNotAllowed(allowed=('GET', 'HEAD'))
         vhost, _ = split_host(environ['HTTP_HOST'], 80)
         site = self.get_site_details(vhost)
         if site is None:
@@ -378,7 +398,7 @@ class ImageProxy(object):
         except HTTPError as exc:
             start_response(
                 make_status_line(exc.code),
-                [('Content-Type', 'text/plain')])
+                [('Content-Type', 'text/plain')] + exc.headers())
             return [exc.message]
 
 
