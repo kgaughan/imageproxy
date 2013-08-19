@@ -6,31 +6,31 @@ assets for different domains.
 
 Example config file::
 
-	[site:example.net]
-	root=/srv/example.net/web/media/images
-	prefix=/assets/media/images
-	cache=false
+    [site:example.net]
+    root=/srv/example.net/web/media/images
+    prefix=/assets/media/images
+    cache=false
 
-	[site:example.com]
-	root=/srv/example.com/web/media/images
-	prefix=/assets/media/images
-	cache=false
+    [site:example.com]
+    root=/srv/example.com/web/media/images
+    prefix=/assets/media/images
+    cache=false
 
-Currently the `cache` field does nothing, but is still required.
+Currently the ``cache`` field does nothing, but is still required.
 
 By default only JPEG files can be resized, but if you'd like to make
 GIFs and PNGs resizable, add the following::
 
-	[type:image/gif]
-	resize=true
+    [type:image/gif]
+    resize=true
 
-	[type:image/png]
-	resize=true
+    [type:image/png]
+    resize=true
 
 You can specify the configuration file location by giving its path in
-the IMAGEPROXY_SETTINGS environment variable.
+the ``IMAGEPROXY_SETTINGS`` environment variable.
 
 If you want to use this with Paste, it comes with a sample config file.
 Naturally, you'll need Paste, PasteDeploy, and PasteScript to run it.
-However, Paste isn't required and the `imageproxy.create_application`
+However, Paste isn't required and the ``imageproxy.create_application``
 callable can be used with any WSGI server.
