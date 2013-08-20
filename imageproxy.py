@@ -152,6 +152,14 @@ def parse_config(conf):
     sites = {}
     types = {}
 
+    def get_bool(section, option, default):
+        """
+        Get a boolean value, or return a default.
+        """
+        if not conf.has_option(section, option):
+            return default
+        return conf.getboolean(section, option)
+
     def parse_type(section, name):
         """
         Parse settings for a 'type' section.
@@ -163,7 +171,7 @@ def parse_config(conf):
         Parse setting for a 'site' section.
         """
         sites[name] = {
-            'cache': conf.getboolean(section, 'cache'),
+            'cache': get_bool(section, 'cache', False),
             'prefix': conf.get(section, 'prefix').rstrip('/'),
             'root': conf.get(section, 'root').rstrip('/'),
         }
