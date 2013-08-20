@@ -172,6 +172,7 @@ def parse_config(conf):
         """
         sites[name] = {
             'cache': get_bool(section, 'cache', False),
+            'directories': get_bool(section, 'directories', True),
             'prefix': conf.get(section, 'prefix').rstrip('/'),
             'root': conf.get(section, 'root').rstrip('/'),
         }
@@ -292,7 +293,7 @@ def list_dir_app(url_path, disc_path):
             [list_dir(url_path, disc_path)])
 
 
-def forbidden_dir_app(url_path, disc_path):
+def forbidden_dir_app(url_path):
     """
     Forbid listing the given directory.
     """
@@ -403,7 +404,9 @@ class ImageProxy(object):
             raise HTTPError(httplib.NOT_FOUND)
 
         if os.path.isdir(path):
-            return list_dir_app(environ['PATH_INFO'], path)
+            if site['directories']:
+                return list_dir_app(environ['PATH_INFO'], path)
+            return forbidden_dir_app(environ['PATH_INFO'])
 
         mimetype, _ = mimetypes.guess_type(path)
         if mimetype is None:
