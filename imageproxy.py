@@ -64,20 +64,6 @@ TEMPLATE = """\
 </html>
 """
 
-FORBIDDEN_TEMPLATE = """\
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>Directory listing forbidden for {0}</title>
-    </head>
-    <body>
-        <h1>Directory listing forbidden for {0}</h1>
-        <hr>
-        <address>ImageProxy/{1}</address>
-    </body>
-</html>
-"""
-
 BLOCK_SIZE = 8196
 
 
@@ -216,6 +202,15 @@ class HTTPError(Exception):
         return []
 
 
+class Forbidden(HTTPError):
+    """
+    Access forbidden.
+    """
+
+    def __init__(self, message=None):
+        super(Forbidden, self).__init__(httplib.FORBIDDEN, message)
+
+
 class MethodNotAllowed(HTTPError):
     """
     Method not allowed.
@@ -251,25 +246,6 @@ def list_dir(url_path, disc_path):
     return TEMPLATE.format(escape(url_path),
                            ''.join(entries),
                            __version__)
-
-
-def list_dir_app(url_path, disc_path):
-    """
-    List the contents of the given directory.
-    """
-    return (httplib.OK,
-            [('Content-Type', 'text/html; charset=utf-8')],
-            [list_dir(url_path, disc_path)])
-
-
-def forbidden_dir_app(url_path):
-    """
-    Forbid listing the given directory.
-    """
-    return (httplib.FORBIDDEN,
-            [('Content-Type', 'text/html; charset=utf-8')],
-            [FORBIDDEN_TEMPLATE.format(escape(url_path),
-                                       __version__)])
 
 
 def send_named_file(environ, path):
@@ -371,9 +347,9 @@ class ImageProxy(object):
         vhost, _ = split_host(environ['HTTP_HOST'], 80)
         site = self.get_site_details(vhost)
         if site is None:
-            raise HTTPError(httplib.FORBIDDEN, 'Host not allowed')
+            raise Forbidden('Host not allowed')
         if not is_subpath(site['prefix'], environ['PATH_INFO'], sep='/'):
-            raise HTTPError(httplib.FORBIDDEN, 'Bad prefix')
+            raise Forbidden('Bad prefix')
         path = real_join(site['root'],
                          environ['PATH_INFO'][(len(site['prefix']) + 1):])
         if not is_subpath(site['root'], path):
@@ -383,8 +359,10 @@ class ImageProxy(object):
 
         if os.path.isdir(path):
             if site['directories']:
-                return list_dir_app(environ['PATH_INFO'], path)
-            return forbidden_dir_app(environ['PATH_INFO'])
+                return (httplib.OK,
+                        [('Content-Type', 'text/html; charset=utf-8')],
+                        [list_dir(environ['PATH_INFO'], path)])
+            raise Forbidden()
 
         mimetype, _ = mimetypes.guess_type(path)
         if mimetype is None:
