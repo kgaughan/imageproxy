@@ -100,6 +100,19 @@ TEMPLATE = """\
 </html>
 """
 
+FORBIDDEN_TEMPLATE = """\
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Access forbidden to {0}</title>
+    </head>
+    <body>
+        <h1>Access forbidden to {0}</h1>
+        <address>ImageProxy/{1}</address>
+    </body>
+</html>
+"""
+
 BLOCK_SIZE = 8196
 
 
@@ -262,6 +275,25 @@ def list_dir(url_path, disc_path):
                            __version__)
 
 
+def list_dir_app(url_path, disc_path):
+    """
+    List the contents of the given directory.
+    """
+    return (httplib.OK,
+            [('Content-Type', 'text/html; charset=utf-8')],
+            [list_dir(url_path, disc_path)])
+
+
+def forbidden_dir_app(url_path, disc_path):
+    """
+    Forbid listing the given directory.
+    """
+    return (httplib.FORBIDDEN,
+            [('Content-Type', 'text/html; charset=utf-8')],
+            [FORBIDDEN_TEMPLATE.format(escape(url_path),
+                                       __version__)])
+
+
 def send_named_file(environ, path):
     """
     Send the given file.
@@ -363,9 +395,7 @@ class ImageProxy(object):
             raise HTTPError(httplib.NOT_FOUND)
 
         if os.path.isdir(path):
-            return (httplib.OK,
-                    [('Content-Type', 'text/html; charset=utf-8')],
-                    [list_dir(environ['PATH_INFO'], path)])
+            return list_dir_app(environ['PATH_INFO'], path)
 
         mimetype, _ = mimetypes.guess_type(path)
         if mimetype is None:
