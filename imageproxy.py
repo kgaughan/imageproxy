@@ -189,25 +189,17 @@ def parse_config(conf):
     return sites, types
 
 
-def resize(src, dest, width, height):
+def resize(src, dest, width):
     """
     Resize the given image and save it to the given sink. `src` and `dest`
     can be either file paths or handles.
     """
     img = Image.open(src)
 
-    # Figure out the corresponding other dimension.
-    src_width, src_height = img.size
-    if height is None:
-        width = min(src_width, width)
-        height = int(float(src_height) * width / src_width)
-    elif width is None:
-        height = min(src_height, height)
-        width = int(float(src_width) * height / src_height)
-
-    # Only resize if smaller.
-    if width < src_width and height < src_height:
-        img.thumbnail((width, height), Image.ANTIALIAS)
+    src_width, height = img.size
+    if width is not None and width < src_width:
+        img.thumbnail((width, int(float(height) * width / src_width)),
+                      Image.ANTIALIAS)
 
     img.save(dest, 'JPEG', quality=90, optimize=True, progressive=True)
 
@@ -310,12 +302,12 @@ def send_named_file(environ, path):
     return send_file(environ, open(path, 'r'))
 
 
-def resize_and_send_file(environ, path, width, height):
+def resize_and_send_file(environ, path, width):
     """
     Resize the given image file and send it.
     """
     fh = stringio.StringIO()
-    resize(path, fh, width, height)
+    resize(path, fh, width)
     fh.seek(0)
     return send_file(environ, fh)
 
@@ -414,14 +406,11 @@ class ImageProxy(object):
 
         parameters = urlparse.parse_qs(environ.get('QUERY_STRING', ''))
         width = get(parameters, 'w', cast=int)
-        height = get(parameters, 'h', cast=int)
 
-        if not self.is_resizable(mimetype) and \
-                (width is not None or height is not None):
+        if not self.is_resizable(mimetype) and width is not None:
             raise HTTPError(httplib.BAD_REQUEST, 'Resizing not allowed!')
 
-        if not self.is_resizable(mimetype) or \
-                (width is None and height is None):
+        if not self.is_resizable(mimetype) or width is None:
             return (httplib.OK,
                     [('Content-Type', mimetype),
                      ('Content-Length', str(os.path.getsize(path)))],
@@ -429,7 +418,7 @@ class ImageProxy(object):
 
         return (httplib.OK,
                 [('Content-Type', mimetype)],
-                resize_and_send_file(environ, path, width, height))
+                resize_and_send_file(environ, path, width))
 
     def __call__(self, environ, start_response):
         try:
