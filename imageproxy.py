@@ -160,6 +160,14 @@ def parse_config(conf):
             return default
         return conf.getboolean(section, option)
 
+    def get_default(section, option, default):
+        """
+        Get a value, or return a default.
+        """
+        if not conf.has_option(section, option):
+            return default
+        return conf.get(section, option)
+
     def parse_type(section, name):
         """
         Parse settings for a 'type' section.
@@ -175,6 +183,9 @@ def parse_config(conf):
             'directories': get_bool(section, 'directories', True),
             'prefix': conf.get(section, 'prefix').rstrip('/'),
             'root': conf.get(section, 'root').rstrip('/'),
+            'dimensions': parse_dimensions(get_default(section,
+                                                       'dimensions',
+                                                       '64,256,320,640')),
         }
 
     parsers = {
@@ -349,6 +360,15 @@ def split_host(host, default_port):
         return (host, default_port)
 
 
+def parse_dimensions(descr):
+    """
+    Parse a list of dimensions.
+    """
+    return set(int(value)
+               for value in descr.split(',')
+               if value.strip() != '')
+
+
 class ImageProxy(object):
     """
     The WSGI application itself.
@@ -406,6 +426,8 @@ class ImageProxy(object):
 
         parameters = urlparse.parse_qs(environ.get('QUERY_STRING', ''))
         width = get(parameters, 'w', cast=int)
+        if width not in site['dimensions']:
+            width = None
 
         if not self.is_resizable(mimetype) and width is not None:
             raise HTTPError(httplib.BAD_REQUEST, 'Resizing not allowed!')
