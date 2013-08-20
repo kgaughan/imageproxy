@@ -243,6 +243,7 @@ class HTTPError(Exception):
         super(HTTPError, self).__init__(message)
         self.code = code
 
+    # pylint: disable-msg=R0201
     def headers(self):
         """
         Additional headers to be sent.
