@@ -177,7 +177,7 @@ class HTTPError(Exception):
     def __init__(self, code, message=None):
         if message is None:
             message = http.client.responses[code]
-        super(HTTPError, self).__init__(message)
+        super().__init__(message)
         self.code = code
 
     # pylint: disable-msg=R0201
@@ -194,7 +194,7 @@ class Forbidden(HTTPError):
     """
 
     def __init__(self, message=None):
-        super(Forbidden, self).__init__(http.client.FORBIDDEN, message)
+        super().__init__(http.client.FORBIDDEN, message)
 
 
 class MethodNotAllowed(HTTPError):
@@ -203,7 +203,7 @@ class MethodNotAllowed(HTTPError):
     """
 
     def __init__(self, allowed=(), message=None):
-        super(MethodNotAllowed, self).__init__(http.client.METHOD_NOT_ALLOWED, message)
+        super().__init__(http.client.METHOD_NOT_ALLOWED, message)
         self.allowed = allowed
 
     def headers(self):
@@ -275,12 +275,11 @@ def split_host(host, default_port):
         if len(parts[1]) > 1:
             return (parts[0], parts[1].lstrip(":"))
         return (parts[0], default_port)
-    else:
-        # IPv4 or hostname.
-        parts = host.split(":", 1)
-        if len(parts) == 2:
-            return tuple(parts)
-        return (host, default_port)
+    # IPv4 or hostname.
+    parts = host.split(":", 1)
+    if len(parts) == 2:
+        return tuple(parts)
+    return (host, default_port)
 
 
 def parse_dimensions(descr):
@@ -296,7 +295,7 @@ class ImageProxy(object):
     """
 
     def __init__(self, sites, types):
-        super(ImageProxy, self).__init__()
+        super().__init__()
         self.sites = sites
         self.types = types
 
