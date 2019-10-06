@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 A small WSGI app that does automatic JPEG image resizing.
 """
@@ -17,31 +16,24 @@ A small WSGI app that does automatic JPEG image resizing.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ConfigParser
+import configparser
 import contextlib
-import httplib
+import http.client
+import io
 import logging
 import mimetypes
 import os
 import os.path
-try:
-    import cStringIO as stringio
-except ImportError:
-    import StringIO as stringio
-import urlparse
+import urllib.parse
+from wsgiref.simple_server import make_server
 from xml.sax.saxutils import escape
 
 from PIL import Image
 import pkg_resources
 
 
-__all__ = (
-    'create_application',
-    'ImageProxy',
-)
-
 # pylint: disable-msg=E1103
-__version__ = pkg_resources.get_distribution('imageproxy').version
+__version__ = pkg_resources.get_distribution("imageproxy").version
 
 
 DEFAULTS = """\
@@ -74,18 +66,16 @@ def load_config(config_file=None):
     """
     Load the config from the available sources.
     """
-    return parse_config(read_config(DEFAULTS,
-                                    'IMAGEPROXY_SETTINGS',
-                                    config_file))
+    return parse_config(read_config(DEFAULTS, "IMAGEPROXY_SETTINGS", config_file))
 
 
 def read_config(defaults, env_var=None, config_file=None):
     """
     Combine the three possible configuration sources.
     """
-    conf = ConfigParser.RawConfigParser()
-    with contextlib.closing(stringio.StringIO(defaults)) as fp:
-        conf.readfp(fp)
+    conf = configparser.RawConfigParser()
+    conf.read_string(defaults)
+
     config_files = []
     if env_var is not None and env_var in os.environ:
         config_files.append(os.getenv(env_var))
@@ -123,30 +113,27 @@ def parse_config(conf):
         """
         Parse settings for a 'type' section.
         """
-        types[name] = conf.getboolean(section, 'resize')
+        types[name] = conf.getboolean(section, "resize")
 
     def parse_site(section, name):
         """
         Parse setting for a 'site' section.
         """
         sites[name] = {
-            'cache': get_bool(section, 'cache', False),
-            'directories': get_bool(section, 'directories', True),
-            'prefix': conf.get(section, 'prefix').rstrip('/'),
-            'root': conf.get(section, 'root').rstrip('/'),
-            'dimensions': parse_dimensions(get_default(section,
-                                                       'dimensions',
-                                                       '64,256,320,640')),
+            "cache": get_bool(section, "cache", False),
+            "directories": get_bool(section, "directories", True),
+            "prefix": conf.get(section, "prefix").rstrip("/"),
+            "root": conf.get(section, "root").rstrip("/"),
+            "dimensions": parse_dimensions(
+                get_default(section, "dimensions", "64,256,320,640")
+            ),
         }
 
-    parsers = {
-        'type:': parse_type,
-        'site:': parse_site,
-    }
+    parsers = {"type:": parse_type, "site:": parse_site}
     for section in conf.sections():
         for prefix in parsers:
             if section.startswith(prefix):
-                parsers[prefix](section, section[len(prefix):])
+                parsers[prefix](section, section[len(prefix) :])
                 break
     return sites, types
 
@@ -160,10 +147,9 @@ def resize(src, dest, width):
 
     src_width, height = img.size
     if width is not None and width < src_width:
-        img.thumbnail((width, int(float(height) * width / src_width)),
-                      Image.ANTIALIAS)
+        img.thumbnail((width, int(float(height) * width / src_width)), Image.ANTIALIAS)
 
-    img.save(dest, 'JPEG', quality=90, optimize=True, progressive=True)
+    img.save(dest, "JPEG", quality=90, optimize=True, progressive=True)
 
 
 def is_subpath(base, path, sep=os.path.sep):
@@ -171,8 +157,8 @@ def is_subpath(base, path, sep=os.path.sep):
     Check if the given path is a proper subpath of a base path.
     """
     if path.startswith(base):
-        trailing = base[len(base):]
-        return trailing == '' or trailing[0] == sep
+        trailing = base[len(base) :]
+        return trailing == "" or trailing[0] == sep
     return False
 
 
@@ -190,7 +176,7 @@ class HTTPError(Exception):
 
     def __init__(self, code, message=None):
         if message is None:
-            message = httplib.responses[code]
+            message = http.client.responses[code]
         super(HTTPError, self).__init__(message)
         self.code = code
 
@@ -208,7 +194,7 @@ class Forbidden(HTTPError):
     """
 
     def __init__(self, message=None):
-        super(Forbidden, self).__init__(httplib.FORBIDDEN, message)
+        super(Forbidden, self).__init__(http.client.FORBIDDEN, message)
 
 
 class MethodNotAllowed(HTTPError):
@@ -217,19 +203,18 @@ class MethodNotAllowed(HTTPError):
     """
 
     def __init__(self, allowed=(), message=None):
-        super(MethodNotAllowed, self).__init__(httplib.METHOD_NOT_ALLOWED,
-                                               message)
+        super(MethodNotAllowed, self).__init__(http.client.METHOD_NOT_ALLOWED, message)
         self.allowed = allowed
 
     def headers(self):
-        return [('Allow', ', '.join(self.allowed))]
+        return [("Allow", ", ".join(self.allowed))]
 
 
 def make_status_line(code):
     """
     Create a HTTP status line.
     """
-    return '{0} {1}'.format(code, httplib.responses[code])
+    return "{0} {1}".format(code, http.client.responses[code])
 
 
 def list_dir(url_path, disc_path):
@@ -239,27 +224,23 @@ def list_dir(url_path, disc_path):
     entries = []
     for entry in sorted(os.listdir(disc_path), key=lambda v: v.lower()):
         if os.path.isdir(os.path.join(disc_path, entry)):
-            entry += '/'
-        entries.append(
-            '<li><a href="{0}">{0}</a></li>'.format(
-                escape(entry)))
-    return TEMPLATE.format(escape(url_path),
-                           ''.join(entries),
-                           __version__)
+            entry += "/"
+        entries.append('<li><a href="{0}">{0}</a></li>'.format(escape(entry)))
+    return TEMPLATE.format(escape(url_path), "".join(entries), __version__)
 
 
 def send_named_file(environ, path):
     """
     Send the given file.
     """
-    return send_file(environ, open(path, 'r'))
+    return send_file(environ, open(path, "rb"))
 
 
 def resize_and_send_file(environ, path, width):
     """
     Resize the given image file and send it.
     """
-    fh = stringio.StringIO()
+    fh = io.BytesIO()
     resize(path, fh, width)
     fh.seek(0)
     return send_file(environ, fh)
@@ -269,9 +250,9 @@ def send_file(environ, fh):
     """
     Send a file.
     """
-    if 'wsgi.file_wrapper' in environ:
-        return environ['wsgi.file_wrapper'](fh, BLOCK_SIZE)
-    return iter(lambda: fh.read(BLOCK_SIZE), '')
+    if "wsgi.file_wrapper" in environ:
+        return environ["wsgi.file_wrapper"](fh, BLOCK_SIZE)
+    return iter(lambda: fh.read(BLOCK_SIZE), "")
 
 
 def get(parameters, key, default=None, cast=str):
@@ -288,15 +269,15 @@ def split_host(host, default_port):
     """
     Extract the hostname and port from a string.
     """
-    if host[:1] == '[':
+    if host[:1] == "[":
         # IPv6
-        parts = host[1:].split(']', 1)
+        parts = host[1:].split("]", 1)
         if len(parts[1]) > 1:
-            return (parts[0], parts[1].lstrip(':'))
+            return (parts[0], parts[1].lstrip(":"))
         return (parts[0], default_port)
     else:
         # IPv4 or hostname.
-        parts = host.split(':', 1)
+        parts = host.split(":", 1)
         if len(parts) == 2:
             return tuple(parts)
         return (host, default_port)
@@ -306,9 +287,7 @@ def parse_dimensions(descr):
     """
     Parse a list of dimensions.
     """
-    return set(int(value)
-               for value in descr.split(',')
-               if value.strip() != '')
+    return set(int(value) for value in descr.split(",") if value.strip() != "")
 
 
 class ImageProxy(object):
@@ -325,10 +304,10 @@ class ImageProxy(object):
         """
         Get the details for the given site.
         """
-        for fuzzy, details in self.sites.iteritems():
+        for fuzzy, details in self.sites.items():
             if site.endswith(fuzzy):
-                leading = site[:-len(fuzzy)]
-                if leading == '' or leading[-1] == '.':
+                leading = site[: -len(fuzzy)]
+                if leading == "" or leading[-1] == ".":
                     return details
         return None
 
@@ -342,49 +321,58 @@ class ImageProxy(object):
         """
         Process the request.
         """
-        if environ['REQUEST_METHOD'] not in ('GET', 'HEAD'):
-            raise MethodNotAllowed(allowed=('GET', 'HEAD'))
-        vhost, _ = split_host(environ['HTTP_HOST'], 80)
+        if environ["REQUEST_METHOD"] not in ("GET", "HEAD"):
+            raise MethodNotAllowed(allowed=("GET", "HEAD"))
+        vhost, _ = split_host(environ["HTTP_HOST"], 80)
         site = self.get_site_details(vhost)
         if site is None:
-            raise Forbidden('Host not allowed')
-        if not is_subpath(site['prefix'], environ['PATH_INFO'], sep='/'):
-            raise Forbidden('Bad prefix')
-        path = real_join(site['root'],
-                         environ['PATH_INFO'][(len(site['prefix']) + 1):])
-        if not is_subpath(site['root'], path):
-            raise HTTPError(httplib.BAD_REQUEST, 'Bad path')
+            raise Forbidden("Host not allowed")
+        if not is_subpath(site["prefix"], environ["PATH_INFO"], sep="/"):
+            raise Forbidden("Bad prefix")
+        path = real_join(
+            site["root"], environ["PATH_INFO"][(len(site["prefix"]) + 1) :]
+        )
+        if not is_subpath(site["root"], path):
+            raise HTTPError(http.client.BAD_REQUEST, "Bad path")
         if not os.path.exists(path):
-            raise HTTPError(httplib.NOT_FOUND)
+            raise HTTPError(http.client.NOT_FOUND)
 
         if os.path.isdir(path):
-            if site['directories']:
-                return (httplib.OK,
-                        [('Content-Type', 'text/html; charset=utf-8')],
-                        [list_dir(environ['PATH_INFO'], path)])
+            if site["directories"]:
+                return (
+                    http.client.OK,
+                    [("Content-Type", "text/html; charset=utf-8")],
+                    [list_dir(environ["PATH_INFO"], path).encode("utf-8")],
+                )
             raise Forbidden()
 
         mimetype, _ = mimetypes.guess_type(path)
         if mimetype is None:
-            mimetype = 'application/octet-stream'
+            mimetype = "application/octet-stream"
 
-        parameters = urlparse.parse_qs(environ.get('QUERY_STRING', ''))
-        width = get(parameters, 'w', cast=int)
-        if width not in site['dimensions']:
+        parameters = urllib.parse.parse_qs(environ.get("QUERY_STRING", ""))
+        width = get(parameters, "w", cast=int)
+        if width not in site["dimensions"]:
             width = None
 
         if not self.is_resizable(mimetype) and width is not None:
-            raise HTTPError(httplib.BAD_REQUEST, 'Resizing not allowed!')
+            raise HTTPError(http.client.BAD_REQUEST, "Resizing not allowed!")
 
         if not self.is_resizable(mimetype) or width is None:
-            return (httplib.OK,
-                    [('Content-Type', mimetype),
-                     ('Content-Length', str(os.path.getsize(path)))],
-                    send_named_file(environ, path))
+            return (
+                http.client.OK,
+                [
+                    ("Content-Type", mimetype),
+                    ("Content-Length", str(os.path.getsize(path))),
+                ],
+                send_named_file(environ, path),
+            )
 
-        return (httplib.OK,
-                [('Content-Type', mimetype)],
-                resize_and_send_file(environ, path, width))
+        return (
+            http.client.OK,
+            [("Content-Type", mimetype)],
+            resize_and_send_file(environ, path, width),
+        )
 
     def __call__(self, environ, start_response):
         try:
@@ -394,8 +382,9 @@ class ImageProxy(object):
         except HTTPError as exc:
             start_response(
                 make_status_line(exc.code),
-                [('Content-Type', 'text/plain')] + exc.headers())
-            return [exc.message]
+                [("Content-Type", "text/plain")] + exc.headers(),
+            )
+            return [bytes(str(exc), "UTF-8")]
 
 
 # pylint: disable-msg=W0613
@@ -403,7 +392,7 @@ def create_application(global_config=None, **local_conf):
     """
     Create a configured instance of the WSGI application.
     """
-    sites, types = load_config(local_conf.get('config'))
+    sites, types = load_config(local_conf.get("config"))
     return ImageProxy(sites, types)
 
 
@@ -411,10 +400,9 @@ def main():
     """
     Run the WSGI application using :mod:`wsgiref`.
     """
-    from wsgiref.simple_server import make_server
-    svr = make_server('localhost', 8080, create_application())
+    svr = make_server("localhost", 8080, create_application())
     svr.serve_forever()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

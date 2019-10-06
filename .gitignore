@@ -1,3 +1,7 @@
 *.py[co]
 /*.egg-info
 /dist
+*.bak
+.*.sw?
+*~
+__pycache__
